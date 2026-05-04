@@ -23,7 +23,7 @@ The new setup is utilising Docker Compose to run a PostgreSQL Database
 
   ./gradlew bootRun
 
-  API is available at http://localhost:8080/users.
+  API is available at http://localhost:8080/users
 
   Run tests (no Docker required)
 
