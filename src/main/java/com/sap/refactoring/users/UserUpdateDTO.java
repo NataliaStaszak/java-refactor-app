@@ -1,5 +1,6 @@
 package com.sap.refactoring.users;
 
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -12,7 +13,9 @@ import java.util.List;
 @AllArgsConstructor
 public class UserUpdateDTO {
 
-    @jakarta.validation.constraints.NotBlank(message = "Name must not be blank")
+    @Email
+    private String email;
+
     private String name;
 
     @Size(min = 1, message = "User must have at least one role")

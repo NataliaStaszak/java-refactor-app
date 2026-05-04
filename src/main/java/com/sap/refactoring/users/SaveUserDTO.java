@@ -13,8 +13,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserDTO {
-    private Long id;
+public class SaveUserDTO {
     @Email
     @NotBlank
     private String email;

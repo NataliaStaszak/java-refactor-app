@@ -1,5 +1,6 @@
 package com.sap.refactoring.integration;
 
+import com.sap.refactoring.users.SaveUserDTO;
 import com.sap.refactoring.users.UserDTO;
 import com.sap.refactoring.users.UserUpdateDTO;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
@@ -40,6 +41,7 @@ public class UserIntegrationTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getId()).isNotNull();
         assertThat(response.getBody().getEmail()).isEqualTo("john@test.com");
         assertThat(response.getBody().getName()).isEqualTo("John");
         assertThat(response.getBody().getRoles()).containsExactly("user");
@@ -50,7 +52,7 @@ public class UserIntegrationTest {
         createUser("john@test.com", "John", "user");
 
         ResponseEntity<String> response = restTemplate.postForEntity("/users",
-                new UserDTO("john@test.com", "John", List.of("user")), String.class);
+                new SaveUserDTO("john@test.com", "John", List.of("user")), String.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
     }
@@ -58,7 +60,7 @@ public class UserIntegrationTest {
     @Test
     public void createUser_returnsBadRequest_whenNoRole() {
         ResponseEntity<String> response = restTemplate.postForEntity("/users",
-                new UserDTO("john@test.com", "John", List.of()), String.class);
+                new SaveUserDTO("john@test.com", "John", List.of()), String.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
@@ -67,11 +69,11 @@ public class UserIntegrationTest {
 
     @Test
     public void updateUser_returnsOk_whenValid() {
-        createUser("john@test.com", "John", "user");
+        UserDTO created = createUser("john@test.com", "John", "user").getBody();
 
-        UserUpdateDTO update = new UserUpdateDTO("Updated Name", List.of("admin"));
+        UserUpdateDTO update = new UserUpdateDTO(null, "Updated Name", List.of("admin"));
         ResponseEntity<UserDTO> response = restTemplate.exchange(
-                "/users/john@test.com", HttpMethod.PATCH, new HttpEntity<>(update), UserDTO.class);
+                "/users/" + created.getId(), HttpMethod.PATCH, new HttpEntity<>(update), UserDTO.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody().getName()).isEqualTo("Updated Name");
@@ -80,10 +82,10 @@ public class UserIntegrationTest {
 
     @Test
     public void updateUser_returnsNotFound_whenUserDoesNotExist() {
-        UserUpdateDTO update = new UserUpdateDTO("Updated Name", List.of("admin"));
+        UserUpdateDTO update = new UserUpdateDTO(null, "Updated Name", List.of("admin"));
 
         ResponseEntity<String> response = restTemplate.exchange(
-                "/users/nonexistent@test.com", HttpMethod.PATCH, new HttpEntity<>(update), String.class);
+                "/users/999", HttpMethod.PATCH, new HttpEntity<>(update), String.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
@@ -126,10 +128,10 @@ public class UserIntegrationTest {
 
     @Test
     public void deleteUser_returnsNoContent_whenUserExists() {
-        createUser("john@test.com", "John", "user");
+        UserDTO created = createUser("john@test.com", "John", "user").getBody();
 
         ResponseEntity<Void> response = restTemplate.exchange(
-                "/users/john@test.com", HttpMethod.DELETE, null, Void.class);
+                "/users/" + created.getId(), HttpMethod.DELETE, null, Void.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
 
@@ -140,7 +142,7 @@ public class UserIntegrationTest {
     @Test
     public void deleteUser_returnsNotFound_whenUserDoesNotExist() {
         ResponseEntity<String> response = restTemplate.exchange(
-                "/users/nonexistent@test.com", HttpMethod.DELETE, null, String.class);
+                "/users/999", HttpMethod.DELETE, null, String.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
@@ -148,6 +150,6 @@ public class UserIntegrationTest {
     // --- helper ---
 
     private ResponseEntity<UserDTO> createUser(String email, String name, String... roles) {
-        return restTemplate.postForEntity("/users", new UserDTO(email, name, List.of(roles)), UserDTO.class);
+        return restTemplate.postForEntity("/users", new SaveUserDTO(email, name, List.of(roles)), UserDTO.class);
     }
 }

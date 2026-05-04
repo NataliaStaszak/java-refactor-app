@@ -1,5 +1,6 @@
 package com.sap.refactoring.unit;
 
+import com.sap.refactoring.users.SaveUserDTO;
 import com.sap.refactoring.users.UserDTO;
 import com.sap.refactoring.users.UserUpdateDTO;
 import com.sap.refactoring.users.UserRepository;
@@ -34,17 +35,20 @@ public class UserServiceTest {
 
     @Test
     void createUser_savesUser_whenValid() {
-        UserDTO dto = new UserDTO("john@test.com", "John", List.of("user"));
+        SaveUserDTO dto = new SaveUserDTO("john@test.com", "John", List.of("user"));
         when(repository.existsByEmail("john@test.com")).thenReturn(false);
+        when(repository.save(any())).thenReturn(new User(1L, "john@test.com", "John", List.of("user")));
 
-        userService.createUser(dto);
+        UserDTO result = userService.createUser(dto);
 
+        assertThat(result.getId()).isEqualTo(1L);
+        assertThat(result.getEmail()).isEqualTo("john@test.com");
         verify(repository).save(any(User.class));
     }
 
     @Test
     void createUser_throwsDuplicateEmailException_whenEmailExists() {
-        UserDTO dto = new UserDTO("john@test.com", "John", List.of("user"));
+        SaveUserDTO dto = new SaveUserDTO("john@test.com", "John", List.of("user"));
         when(repository.existsByEmail("john@test.com")).thenReturn(true);
 
         assertThrows(DuplicateEmailException.class, () -> userService.createUser(dto));
@@ -53,7 +57,7 @@ public class UserServiceTest {
 
     @Test
     void createUser_throwsNoRoleException_whenRolesEmpty() {
-        UserDTO dto = new UserDTO("john@test.com", "John", List.of());
+        SaveUserDTO dto = new SaveUserDTO("john@test.com", "John", List.of());
 
         assertThrows(NoRoleException.class, () -> userService.createUser(dto));
         verify(repository, never()).save(any());
@@ -61,7 +65,7 @@ public class UserServiceTest {
 
     @Test
     void createUser_throwsNoRoleException_whenRolesNull() {
-        UserDTO dto = new UserDTO("john@test.com", "John", null);
+        SaveUserDTO dto = new SaveUserDTO("john@test.com", "John", null);
 
         assertThrows(NoRoleException.class, () -> userService.createUser(dto));
         verify(repository, never()).save(any());
@@ -71,53 +75,65 @@ public class UserServiceTest {
 
     @Test
     void updateUser_updatesNameAndRoles_whenValid() {
-        User existing = new User("john@test.com", "John", List.of("user"));
-        when(repository.findById("john@test.com")).thenReturn(Optional.of(existing));
+        User existing = new User(1L, "john@test.com", "John", List.of("user"));
+        when(repository.findById(1L)).thenReturn(Optional.of(existing));
         when(repository.save(any())).thenReturn(existing);
 
-        UserUpdateDTO update = new UserUpdateDTO("Updated", List.of("admin"));
-        UserDTO result = userService.updateUser("john@test.com", update);
+        UserUpdateDTO update = new UserUpdateDTO(null, "Updated", List.of("admin"));
+        UserDTO result = userService.updateUser(1L, update);
 
         assertThat(result.getName()).isEqualTo("Updated");
         assertThat(result.getRoles()).containsExactly("admin");
     }
 
     @Test
+    void updateUser_updatesEmail_whenEmailProvided() {
+        User existing = new User(1L, "john@test.com", "John", List.of("user"));
+        when(repository.findById(1L)).thenReturn(Optional.of(existing));
+        when(repository.save(any())).thenReturn(new User(1L, "new@test.com", "John", List.of("user")));
+
+        UserUpdateDTO update = new UserUpdateDTO("new@test.com", null, null);
+        UserDTO result = userService.updateUser(1L, update);
+
+        assertThat(result.getEmail()).isEqualTo("new@test.com");
+    }
+
+    @Test
     void updateUser_keepsExistingName_whenNameIsNull() {
-        User existing = new User("john@test.com", "John", List.of("user"));
-        when(repository.findById("john@test.com")).thenReturn(Optional.of(existing));
+        User existing = new User(1L, "john@test.com", "John", List.of("user"));
+        when(repository.findById(1L)).thenReturn(Optional.of(existing));
         when(repository.save(any())).thenReturn(existing);
 
-        UserUpdateDTO update = new UserUpdateDTO(null, List.of("admin"));
-        UserDTO result = userService.updateUser("john@test.com", update);
+        UserUpdateDTO update = new UserUpdateDTO(null, null, List.of("admin"));
+        UserDTO result = userService.updateUser(1L, update);
 
         assertThat(result.getName()).isEqualTo("John");
     }
 
     @Test
     void updateUser_throwsUserNotFoundException_whenUserDoesNotExist() {
-        when(repository.findById("nonexistent@test.com")).thenReturn(Optional.empty());
+        when(repository.findById(99L)).thenReturn(Optional.empty());
 
         assertThrows(UserNotFoundException.class,
-                () -> userService.updateUser("nonexistent@test.com", new UserUpdateDTO("Name", List.of("user"))));
+                () -> userService.updateUser(99L, new UserUpdateDTO(null, "Name", List.of("user"))));
     }
 
     // --- deleteUser ---
 
     @Test
     void deleteUser_deletesUser_whenUserExists() {
-        when(repository.existsById("john@test.com")).thenReturn(true);
+        when(repository.existsById(1L)).thenReturn(true);
 
-        userService.deleteUser("john@test.com");
+        userService.deleteUser(1L);
 
-        verify(repository).deleteById("john@test.com");
+        verify(repository).deleteById(1L);
     }
 
     @Test
     void deleteUser_throwsUserNotFoundException_whenUserDoesNotExist() {
-        when(repository.existsById("nonexistent@test.com")).thenReturn(false);
+        when(repository.existsById(99L)).thenReturn(false);
 
-        assertThrows(UserNotFoundException.class, () -> userService.deleteUser("nonexistent@test.com"));
+        assertThrows(UserNotFoundException.class, () -> userService.deleteUser(99L));
         verify(repository, never()).deleteById(any());
     }
 
@@ -126,8 +142,8 @@ public class UserServiceTest {
     @Test
     void findAllUsers_returnsMappedDTOs() {
         when(repository.findAll()).thenReturn(List.of(
-                new User("john@test.com", "John", List.of("user")),
-                new User("jane@test.com", "Jane", List.of("admin"))
+                new User(1L, "john@test.com", "John", List.of("user")),
+                new User(2L, "jane@test.com", "Jane", List.of("admin"))
         ));
 
         List<UserDTO> result = userService.findAllUsers();
@@ -142,8 +158,8 @@ public class UserServiceTest {
     @Test
     void findAllUsersByName_returnsFilteredDTOs() {
         when(repository.findAllByName("John")).thenReturn(List.of(
-                new User("john1@test.com", "John", List.of("user")),
-                new User("john2@test.com", "John", List.of("admin"))
+                new User(1L, "john1@test.com", "John", List.of("user")),
+                new User(2L, "john2@test.com", "John", List.of("admin"))
         ));
 
         List<UserDTO> result = userService.findAllUsersByName("John");

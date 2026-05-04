@@ -18,52 +18,57 @@ public class UserService {
         this.repository = repository;
     }
 
-    public void createUser(UserDTO request) {
-        if (repository.existsByEmail(request.getEmail())) {
-            throw new DuplicateEmailException(request.getEmail());
+    public UserDTO createUser(SaveUserDTO newSaveUserDTO) {
+        if (repository.existsByEmail(newSaveUserDTO.getEmail())) {
+            throw new DuplicateEmailException(newSaveUserDTO.getEmail());
         }
-        if (request.getRoles() == null || request.getRoles().isEmpty()) {
+        if (newSaveUserDTO.getRoles() == null || newSaveUserDTO.getRoles().isEmpty()) {
             throw new NoRoleException();
         }
-        repository.save(new User(request.getEmail(), request.getName(), request.getRoles()));
+        User saved = repository.save(new User(newSaveUserDTO.getEmail(), newSaveUserDTO.getName(), newSaveUserDTO.getRoles()));
+        return mapUser2UserDTO(saved);
     }
 
     public List<UserDTO> findAllUsers() {
         return repository.findAll().stream()
-                .map(UserService::map)
+                .map(UserService::mapUser2UserDTO)
                 .collect(Collectors.toList());
     }
 
     public List<UserDTO> findAllUsersByName(String name) {
         return repository.findAllByName(name).stream()
-                .map(UserService::map)
+                .map(UserService::mapUser2UserDTO)
                 .collect(Collectors.toList());
     }
 
     @Transactional
-    public UserDTO updateUser(String email, UserUpdateDTO request) {
-        User user = repository.findById(email)
-                .orElseThrow(() -> new UserNotFoundException(email));
+    public UserDTO updateUser(Long id, UserUpdateDTO userUpdateDTO) {
+        User user = repository.findById(id)
+                .orElseThrow(() -> new UserNotFoundException(id));
 
-        if (request.getName() != null) {
-            user.setName(request.getName());
+        if (userUpdateDTO.getEmail() != null) {
+            user.setEmail(userUpdateDTO.getEmail());
         }
-        if (request.getRoles() != null && !request.getRoles().isEmpty()) {
-            user.setRoles(request.getRoles());
+        if (userUpdateDTO.getName() != null) {
+            user.setName(userUpdateDTO.getName());
+        }
+        if (userUpdateDTO.getRoles() != null && !userUpdateDTO.getRoles().isEmpty()) {
+            user.setRoles(userUpdateDTO.getRoles());
         }
 
-        return map(repository.save(user));
+        return mapUser2UserDTO(repository.save(user));
     }
 
     @Transactional
-    public void deleteUser(String email) {
-        if (!repository.existsById(email)) {
-            throw new UserNotFoundException(email);
+    public void deleteUser(Long id) {
+        if (!repository.existsById(id)) {
+            throw new UserNotFoundException(id);
         }
-        repository.deleteById(email);
+        repository.deleteById(id);
+
     }
 
-    private static UserDTO map(User user){
-        return new UserDTO(user.getEmail(), user.getName(), user.getRoles());
+    private static UserDTO mapUser2UserDTO(User user){
+        return new UserDTO(user.getId(),user.getEmail(), user.getName(), user.getRoles());
     }
 }
