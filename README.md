@@ -1,68 +1,57 @@
 Java Refactoring Test Project
 =============================
 
-**Please, before starting this test, read through all of the instructions carefully!**
+Hi, My name is Natalia Staszak and this repository contains my solution to a recruitment task.
+I have decided to create a separate repository as the amount of changes is huge.
+Let me know if you have any questions. I am avaliable on Teams and slack.
 
-Introduction
-------------
+## 1. New setup instruction
+The new setup is utilising Docker Compose to run a PostgreSQL Database
 
-This is a test project used by SAP Team Atlas software hiring process to test your knowledge of Java/Spring best practices and refactoring.
 
-The idea of this exercise is to evaluate your ability to identify poor coding practices and improve the code through the use of best practices.
+  ```bash
+  cp src/main/resources/secret.properties.example src/main/resources/secret.properties
+  cp .env.example .env
 
-The main project is a very basic user management application. We are not looking to add any supplementary features, instead we are verifying the following items:
+  Fill in both files with your database credentials.
 
-* Your knowledge of REST
-* Your knowledge of Gradle
-* Your knowledge of Spring / SpringBoot
-* Your ability to identify and refactor poor Java code
-* Your ability to identify and fix bugs
-* Your ability to apply proven design principles
-* Your ability to write useful and effective tests
+  2. Start the database
 
-Feel free to modify whatever you want! :)
+  docker compose up -d
 
-Prerequisites
--------------
+  3. Start the application
 
-* You must have a Github account. If you don't have one, please create one via the [Github website](http://github.com/).
-* This repo uses Git for source control management (SCM). If you don't already have the git utility already installed on your machine you will need to install it. To do so, check out the [git downloads page](http://git-scm.com/downloads).
-* To build this project you must use Gradle. If you do not have gradle already installed on your machine you will need to install it. To do so, check out the [Gradle downloads](https://gradle.org/install/).
+  ./gradlew bootRun
 
-Instructions
-------------
+  API is available at http://localhost:8080/users.
 
-1. Clone this repo from Github to your local machine.
-2. At the project root directory, run the following command from the command-line:
-   `$ ./gradlew build`
-3. The tests run will fail, as some of the tests are not implemented correctly. Part of the task is to fix these tests.
-4. Now perform the refactoring you deem necessary by using your knowledge of Java/Spring best practices. Remember that this includes both code and tests. Also, please feel free to innovate!
-5. Please make sure that your code compiles and that all tests are green when you are done.
-6. When you are finished please commit your code on your local machine and then [create a patch using git](http://git-scm.com/docs/git-format-patch).
-7. The final step is to send an email to your contact at SAP to inform this person that you have completed the test. Please make sure to attach a copy of the patch containing your changes. If you have simply created your own repository as a clone, then please forward the URL.
+  Run tests (no Docker required)
 
-Business Requirements
----------------------
+  ./gradlew test
+  ```
 
-* The user's email is a unique identifier and should be handled accordingly.
-* A user should have at least one role.
 
-Tips
-----
+## 2. Brief summary of what has been changed
+1. Replaced the 2-layer design (Controller + DAO) with a standard 3-layer Spring architecture
+2. All endpoints changed to correct HTTP semantics
+3. All endpoints changed to correct HTTP semantics:
 
-* Unit tests != integration tests
-* Spring dependency is provided, feel free to use it
-* Don't be afraid to import additional dependencies if you think you need them
-* Remember that you will have to handle concurrent requests
-* Your final architecture should be portable, extensible and easily maintainable
+| Operation | Before | After |
+|-----------|--------|-------|
+| Create user | `GET /add/` | `POST /users` |
+| Get all users | `GET /find/` | `GET /users` |
+| Get by name | `GET /find/?name=` | `GET /users?name=` |
+| Update user | `GET /update/` | `PATCH /users/{email}` |
+| Delete user | `GET /delete/` | `DELETE /users/{email}` |
 
-Bonus
------
+4. Validation & Error Handling added
+5. Sample Data inserted
+6. Integration Tests have been rewrited
+7. Unit Tests has been created for Controller and Service
 
-If this exercise is too easy, additional points will be given for the following: - 
+**Note:** Tests use an in-memory H2 database — no Docker or PostgreSQL required. Flyway is disabled during tests; the schema is created automatically by Hibernate.
 
-* Utilising Docker / Docker Compose to run a PostgreSQL Database as the persistence layer
-* Implement the DB access using Hibernate, or other such ORM
-* Implement DB initialisation using either Flyway or Liquibase
-
-Good luck!
+## 3. Bonus tasks
+1. The application uses PostgreSQL 16 as the persistence layer, running via Docker Compose.
+2. All database access is implemented using Spring Data JPA with Hibernate as the ORM provider.
+3. Database schema and seed data are managed by Flyway migrations located in `src/main/resources/db/migration`
